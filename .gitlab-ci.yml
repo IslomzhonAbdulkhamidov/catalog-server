@@ -1,0 +1,155 @@
+# List of stages for jobs, and their order of execution
+stages:
+  - install_deps
+#  - test
+  - deploy
+
+cache:
+  paths:
+    - node_modules
+
+variables:
+  Repository: "https://gitlab.indatalabs.com/myka-llc/myka-webapp"
+
+# Prod
+# -------------------------------------------------------------------------------------------------------
+install-job:
+  stage: install_deps
+  tags:
+    - prod
+  only:
+    - master
+  script:
+    - echo "move code to another folder..."
+    - rm -rf /home/gitlab-runner/backend
+    - mkdir --parents /home/gitlab-runner/backend
+    - shopt -s dotglob
+    - cp -r * /home/gitlab-runner/backend
+    - cd /home/gitlab-runner/backend
+    - cp /home/gitlab-runner/.env /home/gitlab-runner/backend/.env
+    - echo "npm install..."
+    - npm install
+    - echo "Install complete."
+
+#test-job:
+#  stage: test
+#  tags:
+#    - prod
+#  only:
+#    - master
+#  script:
+#    - cd /home/gitlab-runner/backend
+#    - echo "Running unit tests..."
+#    - npm run test
+#    - echo "Done"
+
+deploy-job:
+  stage: deploy
+  tags:
+    - prod
+  only:
+    - master
+  script:
+    - cd /home/gitlab-runner/backend
+    - echo "Deploying application..."
+    - pm2 stop node_server
+    - sudo env PATH=$PATH:/usr/local/bin /usr/local/lib/node_modules/pm2/bin/pm2 startup systemd -u gitlab-runner --hp /home/gitlab-runner
+    - pm2 start ./app.js -n node_server -f -l /home/gitlab-runner/pm2_logs.log --update-env
+    - pm2 save
+    - echo "Application successfully deployed."
+# -------------------------------------------------------------------------------------------------------
+
+# Stage
+# -------------------------------------------------------------------------------------------------------
+install-job-stage:
+  stage: install_deps
+  tags:
+    - stage
+  only:
+    - stage
+  script:
+    - echo "move code to another folder..."
+    - rm -rf /home/gitlab-runner/backend/stage
+    - mkdir --parents /home/gitlab-runner/backend/stage
+    - shopt -s dotglob
+    - cp -r * /home/gitlab-runner/backend/stage
+    - cd /home/gitlab-runner/backend/stage
+    - cp /home/gitlab-runner/stage/.env /home/gitlab-runner/backend/stage/.env
+    - echo "npm install..."
+    - npm install
+    - echo "Install complete."
+
+#test-job-stage
+#  stage: test
+#  tags:
+#    - stage
+#  only:
+#    - stage
+#  script:
+#    - cd /home/gitlab-runner/backend/stage
+#    - echo "Running unit tests..."
+#    - npm run test
+#    - echo "Done"
+
+deploy-job-stage:
+  stage: deploy
+  tags:
+    - stage
+  only:
+    - stage
+  script:
+    - cd /home/gitlab-runner/backend/stage
+    - echo "Deploying application..."
+    - pm2 stop node_server_stage
+    - sudo env PATH=$PATH:/usr/local/bin /usr/local/lib/node_modules/pm2/bin/pm2 startup systemd -u gitlab-runner --hp /home/gitlab-runner
+    - pm2 start ./app.js -n node_server_stage -f -l /home/gitlab-runner/pm2_logs.log --update-env
+    - pm2 save
+    - echo "Application successfully deployed."
+# -------------------------------------------------------------------------------------------------------
+# Dev
+# -------------------------------------------------------------------------------------------------------
+install-job-dev:
+  stage: install_deps
+  tags:
+    - dev
+  only:
+    - dev
+  script:
+    - echo "move code to another folder..."
+    - rm -rf /home/gitlab-runner/backend/dev
+    - mkdir --parents /home/gitlab-runner/backend/dev
+    - shopt -s dotglob
+    - cp -r * /home/gitlab-runner/backend/dev
+    - cd /home/gitlab-runner/backend/dev
+    - cp /home/gitlab-runner/dev/.env /home/gitlab-runner/backend/dev/.env
+    - echo "npm install..."
+    - npm install
+    - echo "Install complete."
+
+#test-job-dev:   # This job runs in the test stage.
+#  stage: test    # It only starts when the job in the build stage completes successfully.
+#  tags:
+#    - dev
+#  only:
+#    - dev
+#  script:
+#    - cd /home/gitlab-runner/backend/dev
+#    - echo "Running unit tests..."
+#    - npm run test
+#    - echo "Done"
+
+deploy-job-dev:      # This job runs in the deploy stage.
+  stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
+  tags:
+    - dev
+  only:
+    - dev
+  script:
+    - cd /home/gitlab-runner/backend/dev
+    - echo "Deploying application..."
+    - pm2 stop node_server_dev
+    - sudo env PATH=$PATH:/usr/local/bin /usr/local/lib/node_modules/pm2/bin/pm2 startup systemd -u gitlab-runner --hp /home/gitlab-runner
+    - pm2 start ./app.js -n node_server_dev -f -l /home/gitlab-runner/pm2_logs.log --update-env
+    - pm2 save
+    - echo "Application successfully deployed."
+# -------------------------------------------------------------------------------------------------------
